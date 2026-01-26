@@ -17,9 +17,13 @@ async def start_teacher_chat(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("❌ Доступ запрещен.")
         return ConversationHandler.END
 
-    # Получаем список студентов
-    students = {uid: profile for uid, profile in user_profiles.items()
-                if not is_teacher(uid) and profile.get('fio')}
+    # Получаем список студентов ИЗ БАЗЫ ДАННЫХ
+    from database import get_all_users
+    all_users = get_all_users()
+    students = {}
+    for user in all_users:
+        if not is_teacher(user['user_id']) and user.get('fio'):
+            students[user['user_id']] = user
 
     if not students:
         await update.message.reply_text("📭 Пока нет зарегистрированных студентов.")
