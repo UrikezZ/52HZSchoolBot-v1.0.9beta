@@ -295,6 +295,8 @@ async def show_selected_slots(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 async def finish_schedule_selection(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: int):
     """Завершает выбор расписания и отправляет преподавателю"""
+    from database import get_user  # Добавляем импорт
+
     request = get_schedule_request(user_id)
     if not request:
         await safe_edit_message(update.callback_query, "❌ Ошибка: данные не найдены")
@@ -311,6 +313,19 @@ async def finish_schedule_selection(update: Update, context: ContextTypes.DEFAUL
         )
         return
 
+    # Получаем АКТУАЛЬНЫЕ данные студента из БАЗЫ ДАННЫХ
+    db_user = get_user(user_id)
+    if db_user:
+        # Используем данные из БД
+        student_name = db_user.get('fio', 'Неизвестно')
+        student_instruments = ', '.join(db_user.get('instruments', []))
+        student_goals = db_user.get('goals', 'Не указаны')
+    else:
+        # Fallback на старые данные
+        student_name = user_info.get('fio', 'Неизвестно')
+        student_instruments = ', '.join(user_info.get('instruments', []))
+        student_goals = user_info.get('goals', 'Не указаны')
+
     # Формируем сообщение для преподавателя
     all_slots = get_available_slots_for_user(user_id)
     slots_text = "\n".join([f"• {all_slots[slot_id]}" for slot_id in selected_slots])
@@ -322,9 +337,11 @@ async def finish_schedule_selection(update: Update, context: ContextTypes.DEFAUL
     teacher_message = (
         f"🎹 НОВАЯ ЗАЯВКА НА РАСПИСАНИЕ\n"
         f"Неделя: {week_range}\n\n"
-        f"Студент: {user_info.get('fio', 'Неизвестно')}\n"
-        f"Инструмент: {', '.join(user_info.get('instruments', []))}\n"
-        f"Username: @{update.callback_query.from_user.username or 'Не указан'}\n\n"
+        f"👤Студент: {student_name}\n"
+        f"🎸Инструмент: {student_instruments}\n"
+        f"Цели: {student_goals}\n"
+        f"Username: @{update.callback_query.from_user.username or 'Не указан'}\n"
+        f"User ID: {user_id}\n\n"
         f"Выбранные слоты:\n{slots_text}\n\n"
         f"Выберите подходящие слоты для подтверждения (можно выбрать несколько):"
     )
@@ -601,11 +618,18 @@ async def confirm_all_selected_slots(update: Update, context: ContextTypes.DEFAU
         disable_web_page_preview=True
     )
 
-    # Обновляем сообщение преподавателю
+    # Получаем данные студента из БД
+    from database import get_user
+    db_user = get_user(student_id)
+    student_name = db_user.get('fio', 'Неизвестно') if db_user else 'Неизвестно'
+    student_instruments = ', '.join(db_user.get('instruments', [])) if db_user else 'Не указан'
+
     new_text = (
         f"{original_text}\n\n"
         f"✅ Подтверждено {len(confirmed_slots)} занятий.\n"
-        f"Студент уведомлен одним сообщением.\n\n"
+        f"👤Студент: {student_name}\n"
+        f"🎸Инструмент: {student_instruments}\n"
+        f"Уведомлен одним сообщением.\n\n"
         f"*Изменения баланса:*\n"
         f"{payment_text}\n\n"
         f"*Текущий баланс студента:*\n"

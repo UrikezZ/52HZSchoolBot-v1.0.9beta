@@ -114,7 +114,7 @@ async def show_student_menu(message_or_query, context, student_id: int):
 
     student_info = (
         f"🎹 *Студент:* {student_profile['fio']}\n"
-        f"📱 *Инструмент:* {', '.join(student_profile.get('instruments', []))}\n\n"
+        f"🎸 *Инструмент:* {', '.join(student_profile.get('instruments', []))}\n\n"
         f"💰 *Баланс:*\n"
         f"• Уроков осталось: {balance['lessons_left']} шт.\n"
         f"• Всего занятий: {total_lessons} шт.\n"

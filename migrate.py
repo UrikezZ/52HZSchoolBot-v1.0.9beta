@@ -65,7 +65,7 @@ def migrate_from_old_config():
                 'lessons_left': balance.get('lessons_left', 0),
                 'balance': balance.get('balance', 0),
                 'notes': balance.get('notes', ''),
-                'lesson_price': balance.get('lesson_price', 1800),
+                'lesson_price': balance.get('lesson_price', 2000),
                 'total_paid_lessons': balance.get('total_paid_lessons', 0),
                 'total_completed_lessons': balance.get('total_completed_lessons', 0)
             }
