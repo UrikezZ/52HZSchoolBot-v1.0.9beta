@@ -6,6 +6,7 @@ from config import user_profiles, TEACHER_IDS, get_user_role
 FEEDBACK = 1
 
 
+# feedback.py - исправление
 async def start_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Начало процесса обратной связи"""
     user_id = update.effective_user.id
@@ -16,24 +17,49 @@ async def start_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Эта функция только для студентов.")
         return ConversationHandler.END
 
-    # Проверяем, заполнен ли профиль
-    if user_id not in user_profiles or not user_profiles[user_id].get('fio'):
+    # ИСПРАВЛЕННАЯ проверка профиля - используем БД
+    from database import get_user  # Добавьте импорт
+    student_profile = get_user(user_id)  # Используем БД вместо config
+
+    if not student_profile or not student_profile.get('fio'):
         await update.message.reply_text(
             "❌ Сначала заполните профиль в разделе '👤 Мой профиль'",
             reply_markup=ReplyKeyboardMarkup([["👤 Мой профиль", "В главное меню"]], resize_keyboard=True)
         )
         return ConversationHandler.END
 
-    await update.message.reply_text(
-        "💬 *Напишите ваши пожелания к занятию:*\n\n"
-        "Опишите подробно:\n"
-        "• Какие произведения хотите разучить\n"
-        "• Какие техники отработать\n"
-        "• Особые пожелания по формату занятия\n"
-        "• Вопросы к преподавателю\n\n"
-        "Можете писать в одном сообщении - преподаватель получит его полностью.",
-        parse_mode='Markdown',
-        reply_markup=ReplyKeyboardMarkup([["❌ Отменить отправку"]], resize_keyboard=True)
+
+async def handle_feedback_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает сообщение с обратной связью"""
+    user_id = update.effective_user.id
+    feedback_text = update.message.text
+
+    # Проверяем отмену
+    if feedback_text == "❌ Отменить отправку":
+        await update.message.reply_text(
+            "❌ Отправка отменена.",
+            reply_markup=ReplyKeyboardMarkup([["👤 Мой профиль", "В главное меню"]], resize_keyboard=True)
+        )
+        return ConversationHandler.END
+
+    # Получаем информацию о студенте ИЗ БАЗЫ
+    from database import get_user  # Добавьте импорт
+    student_profile = get_user(user_id)  # <-- ИСПРАВЛЕНО
+
+    if not student_profile:
+        await update.message.reply_text(
+            "❌ Профиль не найден. Заполните профиль.",
+            reply_markup=ReplyKeyboardMarkup([["👤 Мой профиль", "В главное меню"]], resize_keyboard=True)
+        )
+        return ConversationHandler.END
+
+    # Формируем сообщение для преподавателя
+    teacher_message = (
+        f"💌 *НОВОЕ СООБЩЕНИЕ ОТ СТУДЕНТА*\n\n"
+        f"*Студент:* {student_profile.get('fio', 'Неизвестно')}\n"
+        f"*Инструмент:* {', '.join(student_profile.get('instruments', []))}\n"
+        f"*Username:* @{update.message.from_user.username or 'Не указан'}\n\n"
+        f"*Пожелания к занятию:*\n{feedback_text}"
     )
 
     return FEEDBACK

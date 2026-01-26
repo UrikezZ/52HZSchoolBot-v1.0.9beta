@@ -68,8 +68,14 @@ async def choose_student(update: Update, context: ContextTypes.DEFAULT_TYPE):
         student_id = int(query.data.split("_")[2])
         context.user_data['chat_student_id'] = student_id
 
-        student_profile = user_profiles.get(student_id, {})
-        student_name = student_profile.get('fio', 'Студент')
+        # ИСПРАВЛЕНО: Используем БД
+        from database import get_user
+        student_profile = get_user(student_id)
+
+        if student_profile:
+            student_name = student_profile.get('fio', 'Студент')
+        else:
+            student_name = 'Студент'
 
         await query.edit_message_text(
             f"✏️ *Напишите сообщение для {student_name}:*\n\n"
@@ -95,11 +101,17 @@ async def send_message_to_student(update: Update, context: ContextTypes.DEFAULT_
         await update.message.reply_text("❌ Ошибка: студент не выбран.")
         return ConversationHandler.END
 
-    student_profile = user_profiles.get(student_id, {})
-    teacher_profile = user_profiles.get(user_id, {})
+    # ИСПРАВЛЕНО: Используем БД вместо user_profiles
+    from database import get_user
+    student_profile = get_user(student_id)
+    teacher_profile = get_user(user_id)
+
+    if not student_profile:
+        await update.message.reply_text("❌ Профиль студента не найден.")
+        return ConversationHandler.END
 
     student_name = student_profile.get('fio', 'Студент')
-    teacher_name = teacher_profile.get('fio', 'Преподаватель')
+    teacher_name = teacher_profile.get('fio', 'Преподаватель') if teacher_profile else 'Преподаватель'
 
     # Формируем сообщение для студента
     student_message = (
@@ -109,7 +121,7 @@ async def send_message_to_student(update: Update, context: ContextTypes.DEFAULT_
         f"_Чтобы ответить, используйте кнопку '👨‍🏫 Связаться с преподавателем'_"
     )
 
-    # Формируем сообщение для преподавателя (подтверждение)
+    # ДОБАВЛЕНО: Формируем подтверждение для преподавателя
     teacher_confirmation = (
         f"✅ *Сообщение отправлено студенту:*\n\n"
         f"*Студент:* {student_name}\n"
@@ -126,7 +138,7 @@ async def send_message_to_student(update: Update, context: ContextTypes.DEFAULT_
 
         # Подтверждаем преподавателю
         await update.message.reply_text(
-            teacher_confirmation,
+            teacher_confirmation,  # Теперь эта переменная существует
             parse_mode='Markdown',
             reply_markup=ReplyKeyboardMarkup([["📊 Панель управления", "В главное меню"]], resize_keyboard=True)
         )
