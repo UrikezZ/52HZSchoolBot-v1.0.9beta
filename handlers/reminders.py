@@ -1,110 +1,104 @@
+# reminders.py - ОБНОВЛЕННАЯ версия
 from telegram.ext import ContextTypes
 from datetime import datetime, timedelta
 import pytz
-from config import confirmed_lessons
-from handlers.reminder_utils import send_reminder_to_student
+from database import get_confirmed_lessons, update_lesson_reminder_sent
+from config import TEACHER_IDS
 
-# Московское время
 MOSCOW_TZ = pytz.timezone('Europe/Moscow')
 
 
-async def send_reminder_to_student(context, student_id, lesson):
-    """Отправляет напоминание студенту о занятии"""
-    try:
-        # Извлекаем дату из названия занятия
-        slot_name = lesson['slot_name']
-        parts = slot_name.split()
-        lesson_date = None
-        for part in parts:
-            if '.' in part and len(part.split('.')) == 3:
-                lesson_date = part
-                break
-
-        # Рассчитываем дату для отмены (сегодня)
-        today_date = "сегодняшнего дня"
-        if lesson_date:
-            try:
-                from datetime import datetime
-                # Сегодняшняя дата для отмены (т.к. напоминание за день до)
-                today = datetime.now()
-                today_date = today.strftime("%d.%m")
-            except:
-                pass
-
-        reminder_text = (
-            f"🔔 *Напоминание о занятии!*\n\n"
-            f"*Завтра у вас запланирован урок:*\n"
-            f"• {lesson['slot_name']}\n\n"
-            f"*Адрес:*\n"
-            f"4-й Сыромятнический переулок, 3/5с3\n"
-            f"[Яндекс Карты](https://yandex.ru/maps/-/CLdYmDK3)\n\n"
-            f"ℹ️ *Бесплатная отмена урока доступна НЕ позже 10:00 {today_date}*\n\n"
-            f"Пожалуйста, не опаздывайте и возьмите с собой все необходимое!"
-        )
-
-        await context.bot.send_message(
-            chat_id=student_id,
-            text=reminder_text,
-            parse_mode='Markdown',
-            disable_web_page_preview=True
-        )
-
-        lesson['reminder_sent'] = True
-        print(f"🔔 Sent reminder to student {student_id}")
-
-    except Exception as e:
-        print(f"ERROR sending reminder to student {student_id}: {e}")
 async def check_and_send_reminders(context: ContextTypes.DEFAULT_TYPE):
-    """Проверяет и отправляет напоминания о занятиях (вызывается ежедневно)"""
-    print("🔔 Checking for reminders...")
+    """Проверяет и отправляет напоминания о занятиях"""
+    print(f"🔔 [{datetime.now()}] Проверка напоминаний...")
 
-    # Текущее время в Москве
     now_moscow = datetime.now(MOSCOW_TZ)
-
-    # Считаем завтрашнюю дату
     tomorrow_date = (now_moscow + timedelta(days=1)).date()
+
+    print(f"🔔 Завтрашняя дата: {tomorrow_date}")
+
+    all_lessons = get_confirmed_lessons()  # Из БД!
+    print(f"🔔 Всего занятий в БД: {len(all_lessons)}")
 
     reminders_sent = 0
 
-    for student_id, lessons in list(confirmed_lessons.items()):
-        for lesson in lessons:
-            # Пропускаем если напоминание уже отправлено
-            if lesson.get('reminder_sent', False):
-                continue
+    for lesson in all_lessons:
+        # Пропускаем если напоминание уже отправлено
+        if lesson.get('reminder_sent', 0) == 1:
+            print(f"  Пропуск: напоминание уже отправлено для урока {lesson.get('id')}")
+            continue
 
-            try:
-                # Пытаемся распарсить дату занятия
-                lesson_datetime_str = lesson.get('lesson_datetime', lesson['slot_name'])
+        slot_name = lesson.get('slot_name', '')
+        print(f"  Проверка урока: {slot_name}")
 
-                # Разные форматы дат: "Пн 02.12.2024 14:00" или "02.12.2024 14:00"
-                parts = lesson_datetime_str.split()
+        try:
+            # Ищем дату и время в названии
+            date_str = None
+            time_str = None
 
-                # Пытаемся найти дату и время
-                date_str = None
-                time_str = None
+            for part in slot_name.split():
+                if '.' in part and len(part.split('.')) == 3:
+                    date_str = part
+                elif ':' in part and len(part.split(':')) == 2:
+                    time_str = part
 
-                for part in parts:
-                    if '.' in part and len(part.split('.')) == 3:
-                        # Нашли дату в формате DD.MM.YYYY
-                        date_str = part
-                    elif ':' in part and len(part.split(':')) == 2:
-                        # Нашли время в формате HH:MM
-                        time_str = part
+            if date_str and time_str:
+                # Парсим дату занятия
+                lesson_datetime = datetime.strptime(f"{date_str} {time_str}", "%d.%m.%Y %H:%M")
+                lesson_datetime = MOSCOW_TZ.localize(lesson_datetime)
 
-                if date_str and time_str:
-                    # Парсим дату занятия
-                    lesson_date = datetime.strptime(f"{date_str} {time_str}", "%d.%m.%Y %H:%M")
-                    lesson_date_moscow = MOSCOW_TZ.localize(lesson_date)
+                print(f"    Дата урока: {lesson_datetime.date()}")
+                print(f"    Завтра: {tomorrow_date}")
 
-                    # Проверяем, что занятие завтра
-                    if lesson_date_moscow.date() == tomorrow_date:
-                        # Отправляем напоминание!
-                        await send_reminder_to_student(context, student_id, lesson)
+                if lesson_datetime.date() == tomorrow_date:
+                    print(f"    ✅ Найдено занятие на завтра!")
+
+                    # Отправляем напоминание
+                    student_id = lesson['user_id']
+
+                    # Рассчитываем дату для отмены
+                    today = datetime.now(MOSCOW_TZ)
+                    cancellation_date = today.strftime("%d.%m")
+
+                    reminder_text = (
+                        f"🔔 *Напоминание о занятии!*\n\n"
+                        f"*Завтра у вас запланирован урок:*\n"
+                        f"• {slot_name}\n\n"
+                        f"*Адрес:*\n"
+                        f"4-й Сыромятнический переулок, 3/5с3\n"
+                        f"[Яндекс Карты](https://yandex.ru/maps/-/CLdYmDK3)\n\n"
+                        f"ℹ️ *Бесплатная отмена урока доступна НЕ позже 10:00 {cancellation_date}*\n\n"
+                        f"Пожалуйста, не опаздывайте и возьмите с собой все необходимое!"
+                    )
+
+                    try:
+                        await context.bot.send_message(
+                            chat_id=student_id,
+                            text=reminder_text,
+                            parse_mode='Markdown',
+                            disable_web_page_preview=True
+                        )
+
+                        # Отмечаем как отправленное
+                        update_lesson_reminder_sent(lesson['id'])
                         reminders_sent += 1
+                        print(f"    ✅ Напоминание отправлено студенту {student_id}")
 
-            except Exception as e:
-                print(
-                    f"ERROR parsing lesson date for reminder (student {student_id}, lesson {lesson.get('slot_name')}): {e}")
-                continue
+                    except Exception as e:
+                        print(f"    ❌ Ошибка отправки студенту {student_id}: {e}")
 
-    print(f"🔔 Sent {reminders_sent} reminders")
+        except Exception as e:
+            print(f"    ❌ Ошибка парсинга даты '{slot_name}': {e}")
+            continue
+
+    print(f"🔔 Отправлено напоминаний: {reminders_sent}")
+
+    # Уведомляем преподавателя
+    if reminders_sent > 0 and TEACHER_IDS:
+        try:
+            await context.bot.send_message(
+                chat_id=TEACHER_IDS[0],
+                text=f"🔔 Отправлено {reminders_sent} напоминаний студентам о занятиях на завтра"
+            )
+        except Exception as e:
+            print(f"❌ Ошибка уведомления преподавателя: {e}")

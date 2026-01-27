@@ -1,4 +1,6 @@
+# reminder_utils.py
 from telegram.ext import ContextTypes
+from database import update_lesson_reminder_sent
 
 
 async def send_reminder_to_student(context: ContextTypes.DEFAULT_TYPE, student_id: int, lesson: dict):
@@ -21,7 +23,8 @@ async def send_reminder_to_student(context: ContextTypes.DEFAULT_TYPE, student_i
             disable_web_page_preview=True
         )
 
-        lesson['reminder_sent'] = True
+        # Отмечаем что напоминание отправлено
+        update_lesson_reminder_sent(lesson['id'])
         print(f"🔔 Sent reminder to student {student_id} for {lesson['slot_name']}")
 
     except Exception as e:
