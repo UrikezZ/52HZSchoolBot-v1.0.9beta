@@ -83,6 +83,8 @@ async def show_teacher_schedule(update: Update, context: ContextTypes.DEFAULT_TY
 
     # СОРТИРУЕМ занятия по дате и времени
     all_lessons_with_details = []
+    now = datetime.now()  # ← ДОБАВЛЕНО: текущее время для фильтрации
+
     for lesson in all_lessons:
         student_profile = get_user(lesson['user_id'])
         if student_profile:
@@ -108,6 +110,11 @@ async def show_teacher_schedule(update: Update, context: ContextTypes.DEFAULT_TY
             try:
                 if date_str and time_str:
                     lesson_datetime = datetime.strptime(f"{date_str} {time_str}", "%d.%m.%Y %H:%M")
+
+                    # ФИЛЬТРАЦИЯ: пропускаем прошедшие занятия ← ДОБАВЛЕНО!
+                    if lesson_datetime < now:
+                        continue  # ← Пропускаем прошедшие занятия!
+
                 else:
                     lesson_datetime = datetime.max
             except:
@@ -124,9 +131,20 @@ async def show_teacher_schedule(update: Update, context: ContextTypes.DEFAULT_TY
                 'datetime': lesson_datetime
             })
 
+    # Проверяем, остались ли будущие занятия ← ДОБАВЛЕНО!
+    if not all_lessons_with_details:
+        await update.message.reply_text(
+            "📅 *На будущие даты нет запланированных занятий.*\n\n"
+            "Студенты могут выбрать расписание через '📅 Выбрать расписание'\n"
+            "Или используйте '✏️ Управление занятиями' для добавления занятий вручную.",
+            parse_mode='Markdown'
+        )
+        return
+
     # Сортируем занятия по дате
     all_lessons_with_details.sort(key=lambda x: x['datetime'])
 
+    # ... остальной код БЕЗ ИЗМЕНЕНИЙ (группировка по дням, формирование текста) ...
     # Группируем занятия по дням
     lessons_by_day = {}
 
@@ -172,7 +190,7 @@ async def show_teacher_schedule(update: Update, context: ContextTypes.DEFAULT_TY
     sorted_days = sorted(lessons_by_day.keys(), key=get_day_datetime)
 
     # Формируем сообщение с группировкой по дням
-    schedule_text = "📋 *Ваше расписание:*\n\n"
+    schedule_text = "📋 *Ваше расписание (только будущие занятия):*\n\n"  # ← ИЗМЕНЕНО!
 
     for day in sorted_days:
         schedule_text += f"*{day}:*\n"
@@ -191,7 +209,7 @@ async def show_teacher_schedule(update: Update, context: ContextTypes.DEFAULT_TY
 
     # Добавляем общее количество занятий
     total_lessons = len(all_lessons_with_details)
-    schedule_text += f"*Всего занятий:* {total_lessons}"
+    schedule_text += f"*Всего будущих занятий:* {total_lessons}"
 
     await update.message.reply_text(schedule_text, parse_mode='Markdown')
 
