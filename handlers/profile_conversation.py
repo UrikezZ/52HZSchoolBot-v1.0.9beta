@@ -139,7 +139,7 @@ async def handle_create_fio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if len(text.split()) < 2:
         await update.message.reply_text(
-            "❌ Пожалуйста, введите полное ФИО (Имя и Фамилию, например: Иван Иванов):"
+            "❌ Пожалуйста, введите полное ФИО (Можно только Имя и Фамилию, например: Иван Иванов):"
         )
         return CREATE_FIO
 
@@ -156,7 +156,7 @@ async def handle_create_fio(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"{step_text}\n"
-        "Введите вашу дату рождения в формате ДД.ММ.ГГГГ (например: 15.05.2005)\n"
+        "Введите вашу дату рождения в формате ДД.ММ.ГГГГ (например: 15.06.2004)\n"
         "Или нажмите кнопку ниже чтобы пропустить:",
         parse_mode='Markdown',
         reply_markup=ReplyKeyboardMarkup([["Не указывать"]], resize_keyboard=True)
@@ -178,7 +178,7 @@ async def handle_create_birthdate(update: Update, context: ContextTypes.DEFAULT_
         if not is_valid_date(text):
             await update.message.reply_text(
                 "❌ Неверный формат даты!\n"
-                "Пожалуйста, введите дату в формате ДД.ММ.ГГГГ (например: 15.05.2005)\n"
+                "Пожалуйста, введите дату в формате ДД.ММ.ГГГГ (например: 15.06.2004)\n"
                 "Или нажмите 'Не указывать':",
                 reply_markup=ReplyKeyboardMarkup([["Не указывать"]], resize_keyboard=True)
             )
@@ -402,7 +402,7 @@ async def handle_edit_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             chat_id=user_id,
             text="📅 *Изменение даты рождения*\n\n"
-                 "Введите вашу дату рождения в формате ДД.ММ.ГГГГ (например: 15.05.2005)\n"
+                 "Введите вашу дату рождения в формате ДД.ММ.ГГГГ (например: 15.06.2004)\n"
                  "Или нажмите кнопку 'Не указывать':",
             parse_mode='Markdown',
             reply_markup=ReplyKeyboardMarkup([["Не указывать"]], resize_keyboard=True)
@@ -481,7 +481,7 @@ async def handle_edit_birthdate(update: Update, context: ContextTypes.DEFAULT_TY
         if not is_valid_date(text):
             await update.message.reply_text(
                 "❌ Неверный формат даты!\n"
-                "Пожалуйста, введите дату в формате ДД.ММ.ГГГГ (например: 15.05.2005)\n"
+                "Пожалуйста, введите дату в формате ДД.ММ.ГГГГ (например: 15.06.2004)\n"
                 "Или нажмите 'Не указывать':",
                 reply_markup=ReplyKeyboardMarkup([["Не указывать"]], resize_keyboard=True)
             )

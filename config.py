@@ -280,12 +280,12 @@ def get_next_week_dates():
 
 
 def get_day_slots(day_index):
-    """Возвращает слоты для конкретного дня (13:00-21:00 для всех дней)"""
+    """Возвращает слоты для конкретного дня (13:00-22:00 для всех дней)"""
     week_dates = get_next_week_dates()
     day_info = week_dates.get(day_index, {})
 
     time_slots = {}
-    for hour in range(13, 22):  # 13:00 до 21:00 включительно
+    for hour in range(13, 23):  # 13:00 до 22:00 включительно
         slot_id = f'day{day_index}_{hour:02d}00'
         time_slots[slot_id] = f"{hour:02d}:00"
 

@@ -13,10 +13,10 @@ LESSON_MANAGEMENT_SELECT_STUDENT, LESSON_MANAGEMENT_MAIN, LESSON_MANAGEMENT_CANC
     LESSON_MANAGEMENT_ADD_SELECT_MONTH, LESSON_MANAGEMENT_ADD_SELECT_DAY, \
     LESSON_MANAGEMENT_ADD_SELECT_TIME, LESSON_MANAGEMENT_ADD_CONFIRM = range(7)
 
-# Времена занятий с 13:00 до 21:00
+# Времена занятий с 13:00 до 22:00
 AVAILABLE_TIMES = [
     "13:00", "14:00", "15:00", "16:00", "17:00",
-    "18:00", "19:00", "20:00", "21:00"
+    "18:00", "19:00", "20:00", "21:00", "22:00"
 ]
 
 # Словарь для отслеживания активных обработок
@@ -584,7 +584,7 @@ async def select_day_for_lesson(update: Update, context: ContextTypes.DEFAULT_TY
 
 @prevent_double_click
 async def show_time_selection(query, context, year: int, month: int, day: int):
-    """Показывает выбор времени для занятия (13:00-21:00)"""
+    """Показывает выбор времени для занятия (13:00-22:00)"""
     date_obj = datetime(year, month, day)
     date_str = date_obj.strftime("%d.%m.%Y")
 
@@ -601,7 +601,7 @@ async def show_time_selection(query, context, year: int, month: int, day: int):
                     occupied_times.add(part)
                     break
 
-    # Создаем клавиатуру с временами (13:00-21:00)
+    # Создаем клавиатуру с временами (13:00-22:00)
     keyboard = []
     row = []
 
@@ -637,7 +637,7 @@ async def show_time_selection(query, context, year: int, month: int, day: int):
     await query.edit_message_text(
         f"🕐 *Добавление занятия*\n\n"
         f"*Дата:* {weekday_rus} {date_str}\n"
-        f"Выберите время (13:00-21:00):\n"
+        f"Выберите время (13:00-22:00):\n"
         f"⛔ - время занято другим студентом",
         parse_mode='Markdown',
         reply_markup=reply_markup
