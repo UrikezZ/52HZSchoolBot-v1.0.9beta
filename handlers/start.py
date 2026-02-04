@@ -56,7 +56,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_role = get_user_role(user_id)
 
     # Ваши контактные данные
-    support_username = "@UrikezZ"
+    support_username = "UrikezZ"
     support_name = "Юрий"
 
     if user_role == "teacher":

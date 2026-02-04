@@ -57,7 +57,7 @@ async def process_menu_button(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     elif text == "🛠 Техподдержка":
         # Ваши данные
-        support_username = "@UrikezZ"
+        support_username = "UrikezZ"
         support_name = "Техподдержка 52 Герца"
         support_message = f"""
     🔧 *Техническая поддержка бота*
